@@ -10,6 +10,11 @@ import org.json.JSONObject;
 public class Durchschnitt {
 
     static double summe=0;
+
+    public String getType() {
+        return type;
+    }
+
     String type;
     int tage;
 

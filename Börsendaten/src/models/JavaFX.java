@@ -14,19 +14,31 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.stage.Stage;
 
+import static models.Hauptprogramm.*;
+
 public class JavaFX extends Application {
 
     public void start(Stage stage) throws Exception {
 
+        Börsendaten_1 a=new Börsendaten_1(typ, anzahlTage, host, database, user, passwort);
+
         final NumberAxis yAchse=new NumberAxis();
         final CategoryAxis xAchse=new CategoryAxis();
 
+        yAchse.setAutoRanging(false);
+        System.out.println(a.min);
+        System.out.println(a.max);
+        yAchse.setLowerBound(a.min - (a.min*0.1));
+        yAchse.setUpperBound(a.max + (a.max*0.1));
+
+
+
         final AreaChart<String, Number> areaChart=new AreaChart<>(xAchse, yAchse);
-        areaChart.setTitle("Aktie_"+ Hauptprogramm.typ);
+        areaChart.setTitle("Börsendaten "+ typ);
         areaChart.setCreateSymbols(false);
         areaChart.setLegendVisible(false);
         xAchse.setLabel("Tage");
-        yAchse.setLabel("Wert_Aktie");
+        yAchse.setLabel("Börsendaten");
 
         XYChart.Series series_aktie= new XYChart.Series();
         XYChart.Series series_durchschnitt= new XYChart.Series();
@@ -36,16 +48,17 @@ public class JavaFX extends Application {
         ArrayList<String> datum=new ArrayList<>();
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection con = DriverManager.getConnection("jdbc:mysql://"+ Hauptprogramm.host+"/"+ Hauptprogramm.database+"?user="+ Hauptprogramm.user+"&password="+ Hauptprogramm.passwort+"&serverTimezone=UTC");
+            String URL = "jdbc:mysql://localhost:3306/Börsendaten?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC";
+            Connection con = DriverManager.getConnection(URL, "root", "Fussball0508+");
             Statement stat=con.createStatement();
-            ResultSet reSe=stat.executeQuery("select * from Aktie_"+ Hauptprogramm.typ);
+            ResultSet reSe=stat.executeQuery("select * from Daten"+ typ);
             while(reSe.next()) {
                 series_aktie.getData().add(new XYChart.Data(reSe.getString("Zeitpunkt"), Double.parseDouble(reSe.getString("TagesEndPreis"))));
                 aktie.add(Double.parseDouble(reSe.getString("TagesEndPreis")));
                 datum.add(reSe.getString("Zeitpunkt"));
             }
 
-            reSe=stat.executeQuery("select * from Aktie_"+ Hauptprogramm.typ+"_200erDurchschnitt");
+            reSe=stat.executeQuery("select * from Durchschnitt"+ typ);
             while(reSe.next()) {
                 series_durchschnitt.getData().add(new XYChart.Data(reSe.getString("Zeitpunkt"), Double.parseDouble(reSe.getString("Durchschnitt"))));
                 durchschnitt.add(Double.parseDouble(reSe.getString("Durchschnitt")));
@@ -58,8 +71,8 @@ public class JavaFX extends Application {
 
         XYChart.Series series_gruen= new XYChart.Series();
         XYChart.Series series_rot= new XYChart.Series();
-        series_gruen.setName("Aktie(Gewinn)");
-        series_rot.setName("Aktie(Verlust)");
+        series_gruen.setName("Börsendaten(Gewinn)");
+        series_rot.setName("Börsendaten(Verlust)");
 
         for(int i=0; i<series_aktie.getData().size(); i++) {
             if(aktie.get(i)>durchschnitt.get(i)){
@@ -73,7 +86,7 @@ public class JavaFX extends Application {
             }
         }
         Scene scene=new Scene(areaChart, 800, 600);
-        scene.getStylesheets().add("API_Aktienkurs/style.css");
+        //scene.getStylesheets().add("models/style.xsl");
         areaChart.getData().addAll(series_aktie, series_durchschnitt, series_gruen, series_rot);
         stage.setScene(scene);
         stage.show();
