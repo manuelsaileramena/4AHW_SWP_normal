@@ -1,7 +1,7 @@
 Börsendaten:
 
 Ziel der Aufgabe:
-Die Finanzen der Aktie über ein JavaFX Diagramm darzstellen, damit auf einem Blick klar ist ob man Gewinn oder Verlust mit der Adtie gemacht hat.
+Die Finanzen der Aktie über ein JavaFX Diagramm darzstellen, damit auf einem Blick klar ist ob man Gewinn oder Verlust mit der Aktie gemacht hat.
 
 Benötigte Libaries für dieses Projekt: 
 java-json.jar | commons-io-2.7.jar | javafx.base.jar | mysql-connector-java-8.0.jar
