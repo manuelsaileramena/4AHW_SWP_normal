@@ -72,8 +72,6 @@ public class API_Data_Boerse /*extends Application*/{
                     a.handeln200();
                     a.kaufenUndHalten();
                     a.handeln200mit3();
-                    //a.tradingEinfügen();
-                    //a.trading200();
                     a.MinUndMax();
                     a.ListNull();
                     a.alleAuswählen();
@@ -83,7 +81,6 @@ public class API_Data_Boerse /*extends Application*/{
                     }
                     createFile(createChart(datumChart,closeDB,durchschnittDB));
                     new SwingWrapper<XYChart>(createChart(datumChart,closeDB,durchschnittDB)).displayChart();
-                    //Application.launch(args);
                     System.exit(0);
                 }
             }
@@ -359,17 +356,18 @@ public class API_Data_Boerse /*extends Application*/{
             ResultSet rs = stmt.executeQuery(sql);
             ResultSet rsAVG = stmtAVG.executeQuery(sqlAVG);
 
-            System.out.println("Datum               Close Werte             Durchschnitt");
+            // System.out.println("Datum               Close Werte             Durchschnitt");
             while (rs.next() && rsAVG.next()) {
-                System.out.println(
+                /*System.out.println(
                         rs.getString("datum")  + "\t \t \t \t" +
                                 rs.getDouble("close") + "\t \t \t \t" +
                                 rsAVG.getDouble("gleitenderDurchschnitt")
-                );
+                );*/
                 Double avgTemp = rsAVG.getDouble("gleitenderDurchschnitt");
                 datumDB.add(rsAVG.getString("datum"));
                 closeDB.add(rs.getDouble("close"));
                 durchschnittDB.add(avgTemp == 0 ? null : avgTemp);
+
             }
             datumDB.sort(null);
 
@@ -452,6 +450,7 @@ public class API_Data_Boerse /*extends Application*/{
             System.out.println(e.getMessage());
         }
     }
+
     public void handeln200() throws SQLException {
         String flag = null;
         int stücke = 0;
@@ -497,8 +496,6 @@ public class API_Data_Boerse /*extends Application*/{
                         flag = "b";
 
                         insertTradeIntoDB((LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depot);
-                        System.out.println("gekauft");
-                        System.out.println(stücke + " Stücke von Aktien");
                     }
                 }
             } else if (flag.equals("b")) {
@@ -514,8 +511,6 @@ public class API_Data_Boerse /*extends Application*/{
                         flag = "s";
                         stücke = 0;
                         insertTradeIntoDB((LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depot);
-                        System.out.println("verkauft");
-                        System.out.println(depot + " Geld im Depot");
                     }
                 }
             }
@@ -529,6 +524,7 @@ public class API_Data_Boerse /*extends Application*/{
         System.out.println(depot + " Geld im Depot");
         System.out.println(((depot/startkapital)*100.00) + " prozentueller Gewinn");
     }
+
     public void insertTradeIntoDB (LocalDate dateTrading, String ticker, String end, String flag, int stücke, int depot) throws SQLException
     {
         String insertFlag = "insert into " + aktie + end +" (datum, ticker, flag, stücke, depot) values ('?',?,?,?,?);";
@@ -584,8 +580,6 @@ public class API_Data_Boerse /*extends Application*/{
                 depot = (depot - rest);
                 flag = "b";
                 insertTradeIntoDB((LocalDate) daten.get(i), aktie, endung, flag, stücke, depot);
-                System.out.println("gekauft");
-                System.out.println(stücke + " Stücke von Aktien");
             }
             else if(daten.get(i) == datumHandelsliste.get(datumHandelsliste.size()-1))
             {
@@ -598,8 +592,6 @@ public class API_Data_Boerse /*extends Application*/{
                 flag = "s";
                 stücke = 0;
                 insertTradeIntoDB((LocalDate) daten.get(i),aktie,endung,flag,stücke,depot);
-                System.out.println("verkauft");
-                System.out.println(depot + " Geld im Depot");
             }
         }
         System.out.println(aktie);
@@ -651,8 +643,6 @@ public class API_Data_Boerse /*extends Application*/{
                         depot = (depot - rest);
                         flag = "b";
                         insertTradeIntoDB((LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depot);
-                        System.out.println("gekauft");
-                        System.out.println(stücke + " Stücke von Aktien");
                     }
                 }
             } else if (flag.equals("b")) {
@@ -668,8 +658,6 @@ public class API_Data_Boerse /*extends Application*/{
                         flag = "s";
                         stücke = 0;
                         insertTradeIntoDB((LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depot);
-                        System.out.println("verkauft");
-                        System.out.println(depot + " Geld im Depot");
                     }
                 }
             }
