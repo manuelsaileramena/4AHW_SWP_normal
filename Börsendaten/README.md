@@ -1,15 +1,15 @@
 Börsendaten:
 
 Ziel der Aufgabe:
-Die Finanzen der Aktie über ein JavaFX Diagramm darzstellen, damit auf einem Blick klar ist ob man Gewinn oder Verlust mit der Aktie gemacht hat.
+Bei diesen 5 Aktien: TSLA, IBM, ATVI, PTC, AMZN 
+sind alle 3 Strategien: 200er, 200er mit 3%, buy and hold
+anzuwenden.
+Bei der 200er-Strategie soll erst dann gekauft/verkauft werden wenn der Kurs über/unter dem Schnittpunkt mit der 200er-Linie liegt. Bei der 200er-Strategie mit 3% soll erst dann gekauft/verkauft werden wenn der Kurs 3% über/unter dem Schnittpunkt mit der 200er-Linie liegt. Und bei der buy and hold Strategie soll am Startdatum eingekauft werden und erst heute verkauft werden. 
+In der Console soll erkendlich sein welche diser 3 Strategien sich am besten zum Investieren eignet.
+Diese Ivestition fängt nämlich an einem Zeitpunkt in der Vergangenheit an und hört am gestrigen Tag auf, da für heute noch keine close Werte erstellt wurden. 
+Es wird ebenfalls mit einem bestimmten Startkapital investiert um zu sehen ob man Gewinn oder Verlust gemacht hätte. 
 
-Benötigte Libaries für dieses Projekt: 
-java-json.jar | commons-io-2.7.jar | javafx.base.jar | mysql-connector-java-8.0.jar
-   
-Ausführung:
-
-Der Benutzer kann am Anfang auswählen welche Aktie er/sie haben will und wie viele Tage der Graph beinhalten soll.
-Die Werte werden zu Beginn aus der URL gelesen und in den entsprechenden Arraylisten abgespeichert. Anschließend verbinde ich mich mit der dazugehörigen Datenbank in diesem Fall heißt sie api. Ich habe ebenfalls eine Klasse connection() geschrieben, damit ich nicht jedes mal diese Zeilen schreiben muss zum Verbinden. Danach habe ich einen neuen Table erstellt und diesen auch befüllt. Nach alledem habe ich den Durchschnitt der Werte für die Aktie berechnet und diesen in die Datenbank eingefügt. Mit der Methode MinUndMax() habe ich den größten Wert und den kleinsten Wert der Aktie heraus gelesen. Als vorletztes habe ich so viele Werte wie der Benutzer ausgewählt hat in der Datenbank ausgegeben. Und zum krönenden Abschluss habe ich die Werte in einen Graph mittels JavaFX gezeichnet, wobei man hier einstellen kann ob alle Werte ausgegeben werden sollen oder nur zehn wie man im Code erkennen kann.
-
-Graph: 
-
+Eventuell benötigende Informationen:
+Die gesamten Aktiendaten werden der Seite https://www.alphavantage.co/ entnommen.
+Mithilfe dieser URL: "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol="+ aktie + "&outputsize=full&apikey=AR87OJ64MUWOW1H1" erhalte ich alle für mich relevanten Daten. Mit denen ich anschließend auch die oben erwähnten Strategien programmiere. 
+Bei den oben angesprochenen Strategien werden nicht die Rohwerte aus der Datenbank verwendet, sondern Werte, welche durch eine Splitcorrection korrigiert wurden. Welche von mir selbst programmiert wurde. Ebenfalls wurde vor den 3 Strategien ein Durschnitt berechnet auf welchen die 200er-Strategie und die 200er-Strategie mit 3% aufgebaut sind. 
