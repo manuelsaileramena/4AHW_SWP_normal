@@ -16,85 +16,19 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.io.File;
 
-import org.knowm.xchart.BitmapEncoder;
-import org.knowm.xchart.XYChartBuilder;
-import org.knowm.xchart.XYSeries;
-import org.knowm.xchart.style.markers.SeriesMarkers;
-import org.knowm.xchart.XYChart;
-import org.knowm.xchart.SwingWrapper;
-
 public class API_Data_Boerse /*extends Application*/{
-    static Scanner reader = new Scanner(System.in);
-    static ArrayList<Double> splitWerte = new ArrayList<>();
-    static ArrayList<Double> splitVerbessert = new ArrayList<>();
-    static ArrayList<Double> closeWerte = new ArrayList<>();
-    static ArrayList<Double> gleitenderDurchschnitt = new ArrayList<>();
-    static ArrayList<LocalDate> daten = new ArrayList<>();
-    static ArrayList<Date> datumChart = new ArrayList<>();
 
-    static ArrayList<Double> durchschnittDB = new ArrayList<>();
-    static ArrayList<Double> closeDB = new ArrayList<>();
-    static ArrayList<String> datumDB = new ArrayList<>();
-    static ArrayList<String> aktien = new ArrayList<>();
+    static String url;
+    static String urlDatabase = "jdbc:mysql://localhost:3306/api?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC";
+    static int depotHandeln = 0;
+    static int depotKaufenUndHalten = 0;
+    static int depotHandeln3 = 0;
+    static int depot;
+    static int depotAller200 = 0;
+    static int depotAller200mit3 = 0;
+    static int depotAllerKaufenUndHalten = 0;
 
-    static ArrayList<LocalDate> datumHandelsliste = new ArrayList<>();
-    static ArrayList<Double> closeHandelsliste = new ArrayList<>();
-    static ArrayList<Double> durchschnittHandelsliste = new ArrayList<>();
-
-    static LocalDate derzeitig = LocalDate.now();
-    static String url, aktie;
-    static double min, max;
-    static double startkapital = 100000;
-    static LocalDate startdatum = LocalDate.parse("2010-01-01");
-
-    public static void main (String args[]) throws IOException, JSONException {
-        try
-        {
-            API_Data_Boerse a = new API_Data_Boerse();
-            a.readFile();
-            for(int i =0;i<aktien.size();i++)
-            {
-                aktie = aktien.get(i);
-                System.out.println(aktie);
-                if(!check(aktie))
-                {
-                    a.urlLesen();
-                    a.getWert(url);
-                    a.verbinden();
-                    a.neuenTableErstellen();
-                    a.einfügen();
-                    a.splitEinfügen();
-                    a.split();
-                    a.update();
-                    a.durchschnitt();
-                    a.durchschnittEinfügen();
-                    a.datumHandelslisteEinfügen();
-                    a.handeln200();
-                    a.kaufenUndHalten();
-                    a.handeln200mit3();
-                    a.MinUndMax();
-                    a.ListNull();
-                    a.alleAuswählen();
-                    for(String dates : datumDB)
-                    {
-                        datumChart.add(Date.valueOf(dates.toString()));
-                    }
-                    createFile(createChart(datumChart,closeDB,durchschnittDB));
-                    new SwingWrapper<XYChart>(createChart(datumChart,closeDB,durchschnittDB)).displayChart();
-                    System.exit(0);
-                }
-            }
-        }catch (Exception e)
-        {
-            System.out.println(e.getMessage());
-        }
-        finally {
-            Scanner scan = new Scanner(System.in);
-            scan.next();
-        }
-
-    }
-    static void readFile() throws FileNotFoundException {
+    static void readFile(List<String> aktien) throws FileNotFoundException {
         Scanner reader = new Scanner(new File("C:\\4AHWII\\SWP\\SWP Kölle\\Projekte\\Börsendaten\\src\\models\\Aktien.txt"));
         while(reader.hasNextLine())
         {
@@ -108,11 +42,11 @@ public class API_Data_Boerse /*extends Application*/{
         return file.exists();
     }
 
-    static void urlLesen() {
+    static void urlLesen(String aktie) {
         url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol="+ aktie + "&outputsize=full&apikey=AR87OJ64MUWOW1H1"; //alphavantage-schüssel einfügen
     }
 
-    static void getWert(String URL) throws JSONException, IOException {
+    static void getWert(String URL, List<LocalDate> daten, List<Double> closeWerte, List<Double> splitWerte) throws JSONException, IOException {
         JSONObject json = new JSONObject(IOUtils.toString(new URL(url), Charset.forName("UTF-8")));
         json = json.getJSONObject("Time Series (Daily)");
         for(int i = 0; i < /*Tage*/ json.names().length(); i++) {
@@ -126,7 +60,7 @@ public class API_Data_Boerse /*extends Application*/{
         Connection conn = null;
         try {
             String url = "jdbc:mysql://localhost:3306/api?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC";
-            conn = DriverManager.getConnection(url, "root", "Fussball0508+");
+            conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             System.out.println("Connection to MySQL has been established.");
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -141,34 +75,24 @@ public class API_Data_Boerse /*extends Application*/{
         }
     }
 
-    private Connection connection(){
-        String url = "jdbc:mysql://localhost:3306/api?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC"; //Pfad einfügen
-        Connection conn = null;
-        try{
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        }
-        catch(ClassNotFoundException e)
+    public static boolean disconnect(Connection connection) throws SQLException{
+        if(connection == null || connection.isClosed())
         {
-            System.out.println(e.getException());
+            return false;
         }
-        try {
-
-            conn = DriverManager.getConnection(url,"root", "Fussball0508+");
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
+        else
+        {
+            connection.close();
+            return connection.isClosed();
         }
-        return conn;
     }
 
-    public static void neuenTableErstellen() {
+    public static void neuenTableErstellen(String aktie) {
         String url = "jdbc:mysql://localhost:3306/api?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC"; //Pfad einfügen
-        String drop = "Drop Table if exists " + aktie + ";";
         String sql = "CREATE table if not exists "+ aktie +" (\n"
                 + "datum Date primary key unique," + "close double);";
-        String dropavg = "drop table if exists " + aktie +"avg ;";
         String avgsql = "CREATE TABLE IF NOT EXISTS " + aktie + "avg (\n"
                 + "datum Date primary key unique," + "gleitenderDurchschnitt double);";
-        String dropsplit = "drop table if exists " + aktie +"split ;";
         String splitsql = "CREATE TABLE IF NOT EXISTS " + aktie + "split (\n"
                 + "datum Date primary key unique," + "close double," + "splitCoefficient double);";
         String dropbuyandhold = "drop table if exists " + aktie +"buyandhold ;";
@@ -180,15 +104,14 @@ public class API_Data_Boerse /*extends Application*/{
         String droptrading3 = "drop table if exists " + aktie +"trade3 ;";
         String trading3 = "CREATE TABLE IF NOT EXISTS " + aktie + "trade3 (\n"
                 + "datum Date primary key unique, " + "ticker varchar(10), " + "flag varchar(1), " + "stücke int, " + "depot double);";
+        String summeallerstrategien = "CREATE TABLE IF NOT EXISTS " + aktie + "summe (\n"
+                + "datum Date primary key unique, " + "buyandhold double, " + "trading double, " + "trading3 double);";
 
         try{
-            Connection conn = DriverManager.getConnection(url, "root", "Fussball0508+");
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             Statement stmt = conn.createStatement();
-            stmt.execute(drop);
             stmt.execute(sql);
-            stmt.execute(dropavg);
             stmt.execute(avgsql);
-            stmt.execute(dropsplit);
             stmt.execute(splitsql);
             stmt.execute(dropbuyandhold);
             stmt.execute(buyandhold);
@@ -196,47 +119,50 @@ public class API_Data_Boerse /*extends Application*/{
             stmt.execute(trading);
             stmt.execute(droptrading3);
             stmt.execute(trading3);
+            stmt.execute(summeallerstrategien);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void einfügen() {
-        String sql = "INSERT INTO " + aktie + "(datum, close) VALUES('?', ?);";
+    public void einfügen(String aktie, List<LocalDate> daten, List<Double> closeWerte) {
+        String sql = "INSERT IGNORE INTO " + aktie + "(datum, close) VALUES('?', ?);";
         try {
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             PreparedStatement pstmt = conn.prepareStatement(sql);
             for (int i = 1; i < closeWerte.size(); i++) {
-                sql = "INSERT INTO " + aktie + "(datum, close) VALUES(\""+daten.get(i).toString()+"\","+ closeWerte.get(i)+");";
+                sql = "INSERT IGNORE INTO " + aktie + "(datum, close) VALUES(\""+daten.get(i).toString()+"\","+ closeWerte.get(i)+");";
                 pstmt.execute(sql);
             }
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void splitEinfügen(){
-        String sql = "INSERT INTO " + aktie + "split (datum, close, splitCoefficient) VALUES('?', ?, ?);";
+    public void splitEinfügen(String aktie, List<LocalDate> daten, List<Double> closeWerte, List<Double> splitWerte){
+        String sql = "INSERT IGNORE INTO " + aktie + "split (datum, close, splitCoefficient) VALUES('?', ?, ?);";
         try{
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             PreparedStatement pstmt = conn.prepareStatement(sql);
             for (int i=1; i<splitWerte.size(); i++){
-                sql = "INSERT INTO " + aktie + "split (datum, close, splitCoefficient) VALUES(\""+daten.get(i).toString()+"\","+closeWerte.get(i)+","+splitWerte.get(i)+");";
+                sql = "INSERT IGNORE INTO " + aktie + "split (datum, close, splitCoefficient) VALUES(\""+daten.get(i).toString()+"\","+closeWerte.get(i)+","+splitWerte.get(i)+");";
                 pstmt.execute(sql);
             }
+            disconnect(conn);
         } catch(SQLException e){
             System.out.println(e.getMessage());
         }
     }
 
-    public void split(){
+    public void split(String aktie, List<LocalDate> daten, List<Double> closeWerte, List<Double> splitWerte, List<Double> splitVerbessert){
         String sql = "Select * from " + aktie + "split order by datum desc;";
         try
         {
             daten = new ArrayList<>();
             splitWerte= new ArrayList<>();
             closeWerte= new ArrayList<>();
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
             while(rs.next())
@@ -257,6 +183,7 @@ public class API_Data_Boerse /*extends Application*/{
             {
                 System.out.println(String.format("%10s", closeWerte.get(i).toString())+String.format("%10s", splitWerte.get(i).toString()) + String.format("%30s", splitCorrected.get(i).toString()));
             }*/
+            disconnect(conn);
         }
         catch(SQLException e)
         {
@@ -265,16 +192,17 @@ public class API_Data_Boerse /*extends Application*/{
 
     }
 
-    public void update () {
+    public void update (String aktie,List<LocalDate> daten, ArrayList<Double> splitVerbessert) {
         String sql = "update " + aktie + " set close = ? where datum = \'?\';";
         try{
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             PreparedStatement pstmt = conn.prepareStatement(sql);
-            for(int i = 0;i<closeWerte.size();i++)
+            for(int i = 0;i<daten.size();i++)
             {
                 sql = "update "+ aktie +" set close = " + splitVerbessert.get(i) + " where datum = \""+ daten.get(i).toString()+ "\";";
                 pstmt.execute(sql);
             }
+            disconnect(conn);
         }
         catch(SQLException e)
         {
@@ -282,13 +210,13 @@ public class API_Data_Boerse /*extends Application*/{
         }
     }
 
-    public void durchschnitt() {
+    public void durchschnitt(String aktie, List<LocalDate> daten, List<Double> gleitenderDurchschnitt) {
         ResultSet rs = null;
         Connection conn = null;
         Statement stmt = null;
         try {
             String url = "jdbc:mysql://localhost:3306/api?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC";
-            conn = DriverManager.getConnection(url, "root", "Fussball0508+");
+            conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             stmt = conn.createStatement();
             String sql;
             for(LocalDate avg : daten) {
@@ -302,130 +230,92 @@ public class API_Data_Boerse /*extends Application*/{
                     }
                 }
             }
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void durchschnittEinfügen() {
-        String sqlAVG = "INSERT INTO "+ aktie +"avg (datum, gleitenderDurchschnitt) VALUES(?, ?)";
+    public void durchschnittEinfügen(String aktie, List<LocalDate> daten, List<Double> gleitenderDurchschnitt) {
+        String sqlAVG = "INSERT IGNORE INTO "+ aktie +"avg (datum, gleitenderDurchschnitt) VALUES(?, ?)";
         try{
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             PreparedStatement pstmt = conn.prepareStatement(sqlAVG);
             for (int i = 0; i < gleitenderDurchschnitt.size(); i++) {
-                sqlAVG = "INSERT INTO "+ aktie +"avg (datum, gleitenderDurchschnitt) VALUES(\""+daten.get(i).toString()+"\","+ gleitenderDurchschnitt.get(i)+");";
+                sqlAVG = "INSERT IGNORE INTO "+ aktie +"avg (datum, gleitenderDurchschnitt) VALUES(\""+daten.get(i).toString()+"\","+ gleitenderDurchschnitt.get(i)+");";
                 pstmt.execute(sqlAVG);
             }
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void MinUndMax() {
-        String sqlmax = "select max(close) from "+ aktie + ";";
-        String sqlmin = "select min(close) from "+ aktie + ";";
-        try
-        {
-            Connection conn = this.connection();
-            Statement stmt = conn.createStatement();
-            ResultSet rsmax = stmt.executeQuery(sqlmax);
-            while(rsmax.next())
-            {
-                max = rsmax.getDouble(1);
-            }
-            ResultSet rsmin = stmt.executeQuery(sqlmin);
-            while (rsmin.next())
-            {
-                min = rsmin.getDouble(1);
-            }
-
-        }
-        catch (SQLException e)
-        {
+    public void summeAllerStrategienEinfügen(String aktie){
+        String summe = "INSERT IGNORE INTO " + aktie + "summe (buyandhold, trading, trading3) VALUES(?, ?, ?);";
+        try {
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
+            PreparedStatement pstmt = conn.prepareStatement(summe);
+            summe = "INSERT IGNORE INTO " + aktie + "(buyandhold, trading, trading3) VALUES(\""+ depotKaufenUndHalten +"\","+ depotHandeln +"\","+ depotHandeln3 +");";
+            pstmt.execute(summe);
+            disconnect(conn);
+        } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void alleAuswählen() {
-        String sql = "SELECT * FROM "+ aktie +" order by datum;";
-        String sqlAVG = "SELECT * FROM "+ aktie +"AVG order by datum;";
+    public void summeAllerStrategien(){
+        depot = depotHandeln + depotKaufenUndHalten + depotHandeln3;
+        System.out.println(depot);
+    }
+
+    public void alleAuswählen(String aktie) {
+        String handeln = "SELECT depot FROM "+ aktie +"trade order by datum desc limit 1;";
+        String haltenkaufen = "SELECT depot FROM "+ aktie +"bh order by datum des limit 1;";
+        String handelnmit3 = "SELECT depot FROM "+ aktie +"trade3 order by datum desc limit 1";
+
         try {
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             Statement stmt = conn.createStatement();
             Statement stmtAVG  = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-            ResultSet rsAVG = stmtAVG.executeQuery(sqlAVG);
+            ResultSet rsh = stmt.executeQuery(handeln);
+            ResultSet rshk = stmtAVG.executeQuery(haltenkaufen);
+            ResultSet rsh3 = stmtAVG.executeQuery(handelnmit3);
 
-            // System.out.println("Datum               Close Werte             Durchschnitt");
-            while (rs.next() && rsAVG.next()) {
-                /*System.out.println(
-                        rs.getString("datum")  + "\t \t \t \t" +
-                                rs.getDouble("close") + "\t \t \t \t" +
-                                rsAVG.getDouble("gleitenderDurchschnitt")
-                );*/
-                Double avgTemp = rsAVG.getDouble("gleitenderDurchschnitt");
-                datumDB.add(rsAVG.getString("datum"));
-                closeDB.add(rs.getDouble("close"));
-                durchschnittDB.add(avgTemp == 0 ? null : avgTemp);
-
+            while (rsh.next() && rsh3.next()) {
+                rsh.getDouble("handeln");
+                rshk.getDouble("halten und kaufen");
+                rsh3.getDouble("handeln mit 3%");
             }
-            datumDB.sort(null);
-
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static void ListNull() {
+    public static void ListNull(List<String> datumDB, List<Double> closeDB, List<Double> durchschnittDB, List<Date> datumChart) {
         datumDB = new ArrayList<String>();
         closeDB = new ArrayList<Double>();
         durchschnittDB = new ArrayList<Double>();
         datumChart = new ArrayList<Date>();
     }
 
-    public static XYChart createChart(List<Date> d, List<Double>... multipleYAxis) {
-        XYChart chart = new XYChartBuilder().title(aktie).width(1000).height(600).build();
-        chart.setYAxisTitle("Close_Values");
-        chart.setXAxisTitle("Dates");
-        List<String> seriesName = new ArrayList<String>();
-        seriesName.add("Close_Value");
-        seriesName.add("Average_Value");
-        //chart.getStyler().setZoomEnabled(true);
-        for(int i = 0; i<seriesName.size();i++)
-        {
-            XYSeries seriesStock = chart.addSeries(seriesName.get(i), datumChart,multipleYAxis[i]);
-            seriesStock.setMarker(null);
-            seriesStock.setMarker(SeriesMarkers.NONE);
-        }
-
-        return chart;
-
-    }
-
-    public static boolean createFile(Object object) throws  IOException {
-        if(object.getClass() != XYChart.class)
-        {
-            return false;
-        }
-        BitmapEncoder.saveBitmap((XYChart) object,"C:\\4AHWII\\SWP\\SWP Kölle\\Projekte\\Börsendaten\\Aktienbilder\\Chart_"+ aktie +"_"+ LocalDate.now(),BitmapEncoder.BitmapFormat.JPG);
-        return true;
-    }
-
     // Trading 200er Strategy
-    public void insertStartTrade(String endung) {
+    public void insertStartTrade(String aktie,String endung, LocalDate startdatum, double startkapital) {
         String sql = "insert into " + aktie + endung +" (datum, ticker, flag, stücke, depot) values ('?',?,?,?,?);";
         try {
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             PreparedStatement ptsmt = conn.prepareStatement(sql);
             sql = "insert into " + aktie + endung + " (datum, ticker, flag, stücke, depot) values " +
                     "(\'" + startdatum.minusDays(1) + "\','" + aktie + "','s',0," + startkapital + ");";
             ptsmt.execute(sql);
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void datumHandelslisteEinfügen() {
+    public void datumHandelslisteEinfügen(double startkapital, LocalDate derzeitig, LocalDate startdatum, String aktie, List<LocalDate> datumHandelsliste, List<Double> closeHandelsliste, List<Double> durchschnittHandelsliste, List<LocalDate> daten) {
         datumHandelsliste = new ArrayList<LocalDate>();
         closeHandelsliste = new ArrayList<Double>();
         durchschnittHandelsliste = new ArrayList<Double>();
@@ -433,7 +323,7 @@ public class API_Data_Boerse /*extends Application*/{
         String sqlAvg = "select gleitenderDurchschnitt from " + aktie + "avg where datum between \'" + startdatum + "\' " +
                 "AND \'" + derzeitig.minusDays(1) + "\';";
         try {
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             Statement smt = conn.createStatement();
             Statement stmtAvg = conn.createStatement();
             ResultSet rs = smt.executeQuery(sql);
@@ -446,71 +336,70 @@ public class API_Data_Boerse /*extends Application*/{
                 closeHandelsliste.add(rs.getDouble("close"));
                 durchschnittHandelsliste.add(rsA.getDouble("gleitenderDurchschnitt"));
             }
+            handeln200(startkapital, aktie, datumHandelsliste, closeHandelsliste, durchschnittHandelsliste, startdatum);
+            System.out.println();
+            kaufenUndHalten(startkapital, aktie, datumHandelsliste, closeHandelsliste, daten, startdatum);
+            System.out.println();
+            handeln200mit3(startkapital, aktie, datumHandelsliste, closeHandelsliste, durchschnittHandelsliste, startdatum);
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void handeln200() throws SQLException {
+    public void handeln200(double startkapital, String aktie, List<LocalDate> datumHandelsliste, List<Double> closeHandelsliste, List<Double> durchschnittHandelsliste, LocalDate startdatum) throws SQLException {
         String flag = null;
         int stücke = 0;
-        int depot = 0;
-        double count = 0;
         String endung = "trade";
-        insertStartTrade(endung);
+        insertStartTrade(aktie,endung, startdatum, startkapital);
         System.out.println("Handeln mit 200");
+        Connection conn = null;
+        conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
         for (int i = 0; i < datumHandelsliste.size(); i++) {
             int rest = 0;
-            flag = null;
-            stücke = 0;
-            depot = 0;
             String sqlFlag = "select * from " + aktie + "trade order by datum desc limit 1";
-            Connection conn = null;
             try {
-                conn = this.connection();
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sqlFlag);
                 while (rs.next()) {
                     flag = rs.getString("flag");
                     stücke = rs.getInt("stücke");
-                    depot = rs.getInt("depot");
+                    depotHandeln = rs.getInt("depot");
                 }
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
-            }
-            finally {
-                conn.close();
             }
             if (flag.equals("s")) {
                 if (!datumHandelsliste.get(i).getDayOfWeek().equals(DayOfWeek.SATURDAY)
                         || (!datumHandelsliste.get(i).getDayOfWeek().equals(DayOfWeek.SUNDAY))) {
                     if (closeHandelsliste.get(i) > durchschnittHandelsliste.get(i)) {
-                        count = 1;
-                        if(splitWerte.get(i) > 1.0)
-                        {
-                            count = count * splitWerte.get(i) ;
-                        }
-                        stücke = (int) (depot / (closeHandelsliste.get(i) * count));
+                        stücke = (int) (depotHandeln / (closeHandelsliste.get(i)));
                         rest = (int) (stücke * closeHandelsliste.get(i));
-                        depot = (depot - rest);
+                        depotHandeln = (depotHandeln - rest);
                         flag = "b";
 
-                        insertTradeIntoDB((LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depot);
+                        insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depotHandeln);
                     }
                 }
             } else if (flag.equals("b")) {
                 if (!datumHandelsliste.get(i).getDayOfWeek().equals("SAMSTAG")
                         || (!datumHandelsliste.get(i).getDayOfWeek().equals("SONNTAG"))) {
                     if (closeHandelsliste.get(i) < durchschnittHandelsliste.get(i)) {
-                        count = 1;
-                        if(splitWerte.get(i) > 1.0)
-                        {
-                            count = count * splitWerte.get(i);
-                        }
-                        depot = (int) ((stücke * closeHandelsliste.get(i)*count) + depot);
+                        depotHandeln = (int) ((stücke * closeHandelsliste.get(i)) + depotHandeln);
                         flag = "s";
                         stücke = 0;
-                        insertTradeIntoDB((LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depot);
+                        insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depotHandeln);
+                    }
+                }
+                if(datumHandelsliste.get(i) == datumHandelsliste.get(datumHandelsliste.size()-1))
+                {
+                    double tempClose = closeHandelsliste.get(datumHandelsliste.size()-1);
+                    if(flag.equals("b"))
+                    {
+                        depotHandeln = (int) ((stücke*tempClose) + depotHandeln);
+                        flag = "s";
+                        stücke = 0;
+                        insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depotHandeln);
                     }
                 }
             }
@@ -519,145 +408,125 @@ public class API_Data_Boerse /*extends Application*/{
                 System.out.println("Datenbankfehler");
             }
         }
-        System.out.println(aktie);
-        depot = (int) (depot - startkapital);
-        System.out.println(depot + " Geld im Depot");
-        System.out.println(((depot/startkapital)*100.00) + " prozentueller Gewinn");
+        disconnect(conn);
+        depotHandeln = (int) (depotHandeln - startkapital);
+        System.out.println(depotHandeln + " Geld im Depot");
+        depotAller200 += depotHandeln;
+        System.out.println(((depotHandeln/startkapital)*100.00) + " prozentuelle Änderung");
     }
 
-    public void insertTradeIntoDB (LocalDate dateTrading, String ticker, String end, String flag, int stücke, int depot) throws SQLException
+    public void insertTradeIntoDB (String aktie,LocalDate dateTrading, String ticker, String end, String flag, int stücke, int depot) throws SQLException
     {
         String insertFlag = "insert into " + aktie + end +" (datum, ticker, flag, stücke, depot) values ('?',?,?,?,?);";
         try {
-            Connection conn = this.connection();
+            Connection conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
             PreparedStatement ptsmt = conn.prepareStatement(insertFlag);
             insertFlag = "insert into " + aktie + end +" (datum, ticker, flag, stücke, depot) values " +
                     "(\'" + dateTrading + "\','" + ticker + "','" + flag + "'," + stücke + "," + depot + ");";
             ptsmt.execute(insertFlag);
+            disconnect(conn);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
     
-    public void kaufenUndHalten () throws SQLException {
+    public void kaufenUndHalten (double startkapital, String aktie, List<LocalDate> datumHandelsliste, List<Double> closeHandelsliste, List<LocalDate> daten, LocalDate startdatum) throws SQLException {
         String flag = null;
         int stücke = 0;
-        int depot = 0;
-        double count = 0;
         String endung = "buyandhold";
-        insertStartTrade(endung);
+        insertStartTrade(aktie, endung, startdatum, startkapital);
         System.out.println("Kaufen und Halten");
-        for ( int i = 0; i<daten.size(); i++) {
+        Connection conn = null;
+        conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");
+        for ( int i = 0; i<datumHandelsliste.size(); i++) {
             int rest = 0;
-            flag = null;
-            stücke = 0;
-            depot = 0;
             String sqlFlag = "select * from " + aktie + "buyandhold order by datum desc limit 1";
-            Connection conn = null;
             try {
-                conn = this.connection();
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sqlFlag);
                 while (rs.next()) {
                     flag = rs.getString("flag");
                     stücke = rs.getInt("stücke");
-                    depot = rs.getInt("depot");
+                    depotKaufenUndHalten = rs.getInt("depot");
                 }
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
-            } finally {
-                conn.close();
             }
-            if(daten.get(i) == datumHandelsliste.get(0))
+            if(datumHandelsliste.get(i) == datumHandelsliste.get(0))
             {
-                count = 1;
-                if(splitWerte.get(i) > 1.0)
-                {
-                    count = count * splitWerte.get(i);
-                }
-                stücke = (int) (depot / (closeHandelsliste.get(i) * count));
+                stücke = (int) (depotKaufenUndHalten / (closeHandelsliste.get(i)));
                 rest = (int) (stücke * closeHandelsliste.get(i));
-                depot = (depot - rest);
+                depotKaufenUndHalten = (depotKaufenUndHalten - rest);
                 flag = "b";
-                insertTradeIntoDB((LocalDate) daten.get(i), aktie, endung, flag, stücke, depot);
+                insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depotKaufenUndHalten);
             }
-            else if(daten.get(i) == datumHandelsliste.get(datumHandelsliste.size()-1))
+            else if(datumHandelsliste.get(i) == datumHandelsliste.get(datumHandelsliste.size()-1))
             {
-                count = 1;
-                if(splitWerte.get(i) > 1.0)
-                {
-                    count = count * splitWerte.get(i);
-                }
-                depot = (int) ((stücke * closeHandelsliste.get(i)*count) + depot);
+                depotKaufenUndHalten = (int) ((stücke * closeHandelsliste.get(i)) + depotKaufenUndHalten);
                 flag = "s";
                 stücke = 0;
-                insertTradeIntoDB((LocalDate) daten.get(i),aktie,endung,flag,stücke,depot);
+                insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i),aktie,endung,flag,stücke,depotKaufenUndHalten);
             }
         }
-        System.out.println(aktie);
-        depot = (int) (depot - startkapital);
-        System.out.println(depot + " Geld im Depot");
-        System.out.println(((depot/startkapital)*100.00) + " prozentueller Gewinn");
+        disconnect(conn);
+        depotKaufenUndHalten = (int) (depotKaufenUndHalten - startkapital);
+        System.out.println(depotKaufenUndHalten + " Geld im Depot");
+        depotAllerKaufenUndHalten += depotKaufenUndHalten;
+        System.out.println(((depotKaufenUndHalten/startkapital)*100.00) + " prozentuelle Änderung");
     }
-    public void handeln200mit3() throws SQLException {
+
+    public void handeln200mit3(double startkapital, String aktie, List<LocalDate> datumHandelsliste, List<Double> closeHandelsliste, List<Double> durchschnittHandelsliste, LocalDate startdatum) throws SQLException {
         String flag = null;
         int stücke = 0;
-        int depot = 0;
-        double count = 0;
         String endung = "trade3";
-        insertStartTrade(endung);
+        insertStartTrade(aktie, endung, startdatum, startkapital);
         System.out.println("Handeln mit 200 und 3%");
+        Connection conn = null;
+        conn = DriverManager.getConnection(urlDatabase, "root", "Fussball0508+");;
         for (int i = 0; i < datumHandelsliste.size(); i++) {
             int rest = 0;
-            flag = null;
-            stücke = 0;
-            depot = 0;
             String sqlFlag = "select * from " + aktie + "trade3 order by datum desc limit 1";
-            Connection conn = null;
             try {
-                conn = this.connection();
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sqlFlag);
                 while (rs.next()) {
                     flag = rs.getString("flag");
                     stücke = rs.getInt("stücke");
-                    depot = rs.getInt("depot");
+                    depotHandeln3 = rs.getInt("depot");
                 }
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
-            }
-            finally {
-                conn.close();
             }
             if (flag.equals("s")) {
                 if (!datumHandelsliste.get(i).getDayOfWeek().equals(DayOfWeek.SATURDAY)
                         || (!datumHandelsliste.get(i).getDayOfWeek().equals(DayOfWeek.SUNDAY))) {
                     if ((closeHandelsliste.get(i)*1.03) > durchschnittHandelsliste.get(i)) {
-                        count = 1;
-                        if(splitWerte.get(i) > 1.0)
-                        {
-                            count = count * splitWerte.get(i) ;
-                        }
-                        stücke = (int) (depot / ((closeHandelsliste.get(i)*1.03) * count));
+                        stücke = (int) (depotHandeln3 / ((closeHandelsliste.get(i)*1.03)));
                         rest = (int) (stücke * (closeHandelsliste.get(i)*1.03));
-                        depot = (depot - rest);
+                        depotHandeln3 = (depotHandeln3 - rest);
                         flag = "b";
-                        insertTradeIntoDB((LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depot);
+                        insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i), aktie, endung, flag, stücke, depotHandeln3);
                     }
                 }
             } else if (flag.equals("b")) {
                 if (!datumHandelsliste.get(i).getDayOfWeek().equals(DayOfWeek.SATURDAY)
                         || (!datumHandelsliste.get(i).getDayOfWeek().equals(DayOfWeek.SUNDAY))) {
                     if ((closeHandelsliste.get(i)*1.03) < durchschnittHandelsliste.get(i)) {
-                        count = 1;
-                        if(splitWerte.get(i) > 1.0)
-                        {
-                            count = count * splitWerte.get(i);
-                        }
-                        depot = (int) ((stücke * (closeHandelsliste.get(i)*1.03)*count) + depot);
+                        depotHandeln3 = (int) ((stücke * (closeHandelsliste.get(i)*1.03)) + depotHandeln3);
                         flag = "s";
                         stücke = 0;
-                        insertTradeIntoDB((LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depot);
+                        insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depotHandeln3);
+                    }
+                }
+                if(datumHandelsliste.get(i) == datumHandelsliste.get(datumHandelsliste.size()-1))
+                {
+                    double tempClose = closeHandelsliste.get(datumHandelsliste.size()-1);
+                    if(flag.equals("b"))
+                    {
+                        depotHandeln3 = (int) ((stücke*tempClose) + depotHandeln3);
+                        flag = "s";
+                        stücke = 0;
+                        insertTradeIntoDB(aktie,(LocalDate) datumHandelsliste.get(i),aktie, endung, flag, stücke, depotHandeln3);
                     }
                 }
             }
@@ -666,9 +535,10 @@ public class API_Data_Boerse /*extends Application*/{
                 System.out.println("Datenbankfehler");
             }
         }
-        System.out.println(aktie);
-        depot = (int) (depot - startkapital);
-        System.out.println(depot + " Geld im Depot");
-        System.out.println(((depot/startkapital)*100.00) + " prozentueller Gewinn");
+        disconnect(conn);
+        depotHandeln3 = (int) (depotHandeln3 - startkapital);
+        System.out.println(depotHandeln3 + " Geld im Depot");
+        depotAller200mit3 += depotHandeln3;
+        System.out.println(((depotHandeln3/startkapital)*100.00) + " prozentuelle Änderung");
     }
 }
